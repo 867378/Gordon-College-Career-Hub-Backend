@@ -43,41 +43,49 @@ class UserController extends Controller
         return Socialite::driver('google')->stateless()->with(['prompt' => 'consent'])->redirect();
     }
 
-    public function handleGoogleCallback(Request $request)
+   public function handleGoogleCallback(Request $request)
     {
-        $googleUser = Socialite::driver('google')->stateless()->user();
+        try {
+            $googleUser = Socialite::driver('google')->stateless()->user();
 
-        $user = User::firstOrCreate(
-            ['google_id' => $googleUser->id],
-            [
-                'name' => $googleUser->name,
-                'email' => $googleUser->email,
-                'password' => Hash::make(uniqid()),
-                'email_verified_at' => now(),
-            ]
-        );
+            $user = User::firstOrCreate(
+                ['google_id' => $googleUser->id],
+                [
+                    'name' => $googleUser->name,
+                    'email' => $googleUser->email,
+                    'password' => Hash::make(uniqid()),
+                    'email_verified_at' => now(),
+                ]
+            );
 
-        $token = $user->createToken('auth_token')->plainTextToken;
+            $token = $user->createToken('auth_token')->plainTextToken;
 
-        // Only send necessary user info
-        $userData = [
-            'id' => $user->id,
-            'name' => $user->name,
-            'email' => $user->email,
-            'role' => $user->role,
-        ];
+            // Only send necessary user info
+            $userData = [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+            ];
 
-        $payload = [
-            'token' => $token,
-            'user' => $userData,
-            'redirect' => (empty($user->role) || is_null($user->role))
-                ? "/signup/{$user->id}"
-                : ($user->role === 'applicant' ? '/applicantdash' : '/companydash')
-        ];
+            $payload = [
+                'token' => $token,
+                'user' => $userData,
+                'redirect' => (empty($user->role) || is_null($user->role))
+                    ? "/signup/{$user->id}"
+                    : ($user->role === 'applicant' ? '/applicantdash' : '/companydash')
+            ];
 
-        return redirect()->away(
-            env('FRONTEND_URL') . '/redirecting?payload=' . urlencode(json_encode($payload))
-        );
+            $encodedPayload = base64_encode(json_encode($payload));
+            
+            return redirect()->away(
+                env('FRONTEND_URL') . '/#/redirecting?payload=' . $encodedPayload
+            );
+        } catch (\Exception $e) {
+            return redirect()->away(
+                env('FRONTEND_URL') . '/login?error=authentication_failed'
+            );
+        }
     }
 
     public function selectRole($userId){
