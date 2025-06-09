@@ -21,7 +21,7 @@ return [
 
     'allowed_origins' => ['https://gordon-college-career-hub-frontend.vercel.app'],
 
-    'allowed_origins_patterns' => ['*'],
+    'allowed_origins_patterns' => [],
 
     'allowed_headers' => ['*'],
 
